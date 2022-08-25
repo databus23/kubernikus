@@ -1,0 +1,50 @@
+project_name: kubernikus
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/kubernikusctl
+    binary: kubernikusctl
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: linux
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/sapcc/kubernikus/pkg/version.GitCommit={{ .FullCommit  }}
+    # Set the modified timestamp on the output binary to ensure that builds are reproducible.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+checksum:
+  name_template: "checksums.txt"
+
+signs:
+  - artifacts: checksum
+    #stdin: '{{ .Env.GPG_PASSWORD }}'
+    args: ["--batch","--output", "$signature", "--detach-sign", "$artifact"]
+archives:
+  - name_template: '{{ .ProjectName }}-{{ replace .Version "v" "" }}-{{ .Os }}-{{ .Arch }}'
+    format_overrides:
+      - goos: windows
+        format: zip
+release:
+  mode: replace
+  github:
+    owner: databus23
+    name: kubernikus
+  target_commitish: '{{ .Commit }}'
